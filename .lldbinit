@@ -1,3 +1,6 @@
 command alias -H "AutoLayout will get the root view and recursively dump all the subviews and their frames" -h "Recursively dump views" -- AutoLayout expression -l objc -O -- [[[[[UIApplication sharedApplication] keyWindow] rootViewController] view] recursiveDescription]
 command alias cpo expression -l objc -O -- 
 command alias lpo expression -l %1 -O --
+command regex rlook `s/(.+)/image lookup -rn %1/`
+command regex -- tv 's/(.+)/expression -l objc -O -- @import QuartzCore; [%1 setHidden:!(BOOL)[%1 isHidden]]; (void)[CATransaction flush];/'
+command regex getcls 's/(([0-9]|\$|\@|\[).*)/cpo [%1 class]/' 's/(.+)/expression -l swift -O -- type(of: %1)/'
