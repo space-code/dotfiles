@@ -1,0 +1,23 @@
+# Reloads the ~/.lldbinit file.
+command alias -H "Reload ~/.lldbinit" -h "Reload ~/.lldbinit" -- reload_lldbinit command source ~/.lldbinit
+
+# Performs a regex search on the input and performs a specific image lookup on the matched result.
+command regex -h "Regex search" -s "rlook UIViewController.viewDidLoad" -- rlook 's/(.+)/image lookup -rn %1/'
+
+# Executes an experssion with Objective-C language and optimization flag.
+command alias cpo expression -l objc -O -- 
+
+# Executes an experssion with Objective-C language.
+command alias cp expression -l objc -- 
+
+# Executes an expression with Swift and optimization flag.
+command alias spo experssion -l swift -O --
+
+# Executes an expression with Swift.
+command alias sp experssion -l swift --
+
+# Executes an expression with a specified language (given by %1) parameter and optimization flag.
+command alias lpo expression -l %1 -O --
+
+# This command defines a regex search for 'doc' that opens the LLDB documentation page for the matched class.
+command regex doc 's/(.+)/script import os; os.system("open https:" + chr(47) + chr(47) + "lldb.llvm.org" + chr(47) + "python_reference" + chr(47) + "lldb.%1-class.html")/'
