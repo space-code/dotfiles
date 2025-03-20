@@ -11,6 +11,8 @@ Usage:
 """
 
 import lldb
+import optparse
+import shlex
 
 
 def __lldb_init_module(debugger, internal_dict):
@@ -23,8 +25,25 @@ def break_after_regex(debugger, command, result, internal_dict):
     """The function sets a regex breakpoint and prints
     output values after stepping out."""
 
+    command = command.replace("\\", "\\\\")
+    command_args = shlex.split(command, posix=False)
+
+    parser = generate_option_parser()
+
+    try:
+        (options, args) = parser.parse_args(command_args)
+    except:
+        result.SetError(parser.usage)
+        return
+
     target = debugger.GetSelectedTarget()
-    bp = target.BreakpointCreateByRegex(command)
+
+    clean_command = shlex.split(args[0])[0]
+
+    if options.non_regex:
+        bp = target.BreakpointCreateByName(clean_command, options.module)
+    else:
+        bp = target.BreakpointCreateByRegex(clean_command, options.module)
 
     if not bp.IsValid() or bp.num_locations == 0:
         result.AppendWarning("Breakpoint isn't valid or hasn't found any hits.")
@@ -101,3 +120,31 @@ def get_register_string(target):
         return "$x0"
 
     raise Exception("Unknown hardware.")
+
+
+def generate_option_parser():
+    """Gets the return register as a string for lldb
+    based upon the hardware"""
+    usage = "usage: %prog [options] breakpoint_query\n" + "Use 'bar -h' for option desc"
+
+    parser = optparse.OptionParser(usage=usage, prog="bar")
+
+    parser.add_option(
+        "-n",
+        "--non_regex",
+        action="store_true",
+        default=False,
+        dest="non_regex",
+        help="Use a non-regex breakpoint instead",
+    )
+
+    parser.add_option(
+        "-m",
+        "--module",
+        action="store",
+        default=None,
+        dest="module",
+        help="Filter a breakpoint by only searching within a specified Module",
+    )
+
+    return parser
