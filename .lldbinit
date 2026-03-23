@@ -1,1 +1,3 @@
 command script import ~/lldb/lldbinit.py
+
+settings set target.skip-prologue false
