@@ -1,1 +1,3 @@
+# Global setting to ensure LLDB doesn't skip the prologue of functions during debugging.
+# This ensures that breakpoints set at the beginning of a function are hit correctly.
 settings set target.skip-prologue false
