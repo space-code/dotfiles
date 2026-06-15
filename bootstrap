@@ -1,19 +1,35 @@
 #!/usr/bin/env bash
 
+#
+#  dotfiles - bootstrap
+#  Copyright © 2025 Space Code. All rights reserved.
+#
+#  This script synchronizes the dotfiles from the repository to the user's
+#  home directory. It is identical to bootstrap.sh and provided as an 
+#  alternative command name.
+#
+
+# Navigate to the directory where the script is located
 cd "$(dirname "${BASH_SOURCE[0]}")" || exit
 
+# Pull the latest changes from the main branch
 git pull origin main
 
+# Function to update the home directory with the dotfiles
 update() {
+    # Synchronize configuration files using rsync
     rsync --exclude ".git/" \
           --exclude ".DS_Store" \
           --exclude "bootstrap.sh" \
           --exclude "README.md" \
           --exclude "LICENSE" \
           -avh --no-perms . ~
+          
+    # Reload the bash profile
     source ~/.bash_profile
 }
 
+# Handle command-line arguments and confirmation
 if [[ "$1" == "--force" || "$1" == "-f" ]]; then
     update
 else
@@ -24,4 +40,5 @@ else
     fi
 fi
 
+# Clean up
 unset -f update

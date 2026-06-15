@@ -1,3 +1,5 @@
+# Load the main LLDB initialization script that dynamically loads custom commands
 command script import ~/lldb/lldbinit.py
 
+# Global setting to ensure LLDB doesn't skip the prologue of functions during debugging
 settings set target.skip-prologue false

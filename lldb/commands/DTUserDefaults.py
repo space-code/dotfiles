@@ -3,25 +3,42 @@
 #  Copyright © 2026 Space Code. All rights reserved.
 #
 
+"""
+This module defines the UDumpCommand class, which provides an LLDB command
+to dump the contents of NSUserDefaults as a formatted table.
+"""
+
 import lldbbase as bc
 
 
 def commands():
-    """Return a list of custom LLDB commands registered in the plugin"""
-    return [UDumpCommand()]
+    """Returns a list of custom LLDB command instances defined in this module."""
+    return [DTPrintDefaultsCommand()]
 
 
-class UDumpCommand(bc.BaseCommand):
-    "UDumpCommand"
+class DTPrintDefaultsCommand(bc.BaseCommand):
+    """
+    LLDB command that dumps NSUserDefaults contents as a formatted key-value table.
+    Usage: pdefaults [-s suite] [-f filter] [-o]
+    """
 
     def name(self):
-        """The command name used in LLDB (e.g. (lldb) udump)"""
-        return "udump"
+        """Returns the command name as it will be used in the LLDB console (pdefaults)."""
+        return "pdefaults"
 
     def description(self):
+        """Provides a short description of the command's purpose."""
         return "Dumps NSUserDefaults contents as a formatted key-value table"
 
     def options(self):
+        """
+        Defines the supported command-line options for the pdefaults command.
+
+        Available options:
+        -s, --suite: Suite name (default: standardUserDefaults).
+        -f, --filter: Filter keys by substring.
+        -o, --alphabetical: Sort keys alphabetically.
+        """
         return [
             bc.CommandArgument(
                 short="-s",
@@ -50,6 +67,10 @@ class UDumpCommand(bc.BaseCommand):
         ]
 
     def run(self, args, options):
+        """
+        Executes the command logic. Retrieves the NSUserDefaults instance,
+        collects entries, and prints them in a formatted table.
+        """
         defaults = get_defaults_instance(options.suite)
 
         if defaults is None or defaults == "0x0":
@@ -70,6 +91,7 @@ def get_defaults_instance(suite):
     """
     Returns the NSUserDefaults instance address for the given suite name.
     Uses standardUserDefaults when suite is empty.
+
     :param suite: Suite name string, or empty string for standard defaults
     :return: Object address string (e.g. '0x600003a12340'), or None on failure
     """
@@ -84,7 +106,8 @@ def get_defaults_instance(suite):
 def get_dictionary_representation(defaults):
     """
     Calls dictionaryRepresentation on an NSUserDefaults instance.
-    Returns an NSDictionary containing all currently registered key-value pairs.
+    Returns an NSDictionary address containing all currently registered key-value pairs.
+
     :param defaults: NSUserDefaults address string
     :return: NSDictionary address string
     """
@@ -98,6 +121,7 @@ def collect_entries(defaults, filter_str):
     """
     Iterates over all keys in NSUserDefaults and returns a list of (key, value) tuples.
     Applies case-insensitive substring filtering when filter_str is non-empty.
+
     :param defaults: NSUserDefaults address string
     :param filter_str: Substring to filter keys by, or empty string to include all
     :return: List of (key_string, value_string) tuples
@@ -131,6 +155,7 @@ def collect_entries(defaults, filter_str):
 def nsstring_to_str(obj):
     """
     Converts an NSString object address to a Python string via UTF8String.
+
     :param obj: NSString address string
     :return: Python string, or '<nil>' / '<unreadable>' on failure
     """
@@ -151,16 +176,7 @@ def nsstring_to_str(obj):
 
 def get_class_name(obj):
     """
-    Returns the class name of any ObjC object — including tagged pointers.
-
-    NSStringFromClass([(id)ptr class]) fails in two situations:
-      1. Tagged pointers — no real heap object, ObjC dispatch crashes.
-      2. Certain toll-free bridged types — LLDB loses type info on (id) cast.
-
-    object_getClassName((id)ptr) is a plain C function from <objc/runtime.h>
-    that handles both cases via the ObjC runtime directly, without message send.
-    We cast the return to (const char *) because LLDB doesn't import the header
-    and treats the return type as unknown otherwise.
+    Returns the class name of any Objective-C object address.
 
     :param obj: Object address string (e.g. '0x600003a12340')
     :return: Class name string, or '<unknown>' on failure
@@ -177,8 +193,8 @@ def get_class_name(obj):
 def format_value(obj):
     """
     Formats an arbitrary NSObject for display.
-    Appends the short class name in parentheses to disambiguate types
-    (e.g. '1  (Bool)' vs '1  (Number)').
+    Appends the short class name in parentheses to disambiguate types.
+
     :param obj: Object address string
     :return: Formatted string representation
     """
@@ -198,6 +214,7 @@ def shorten_class_name(class_name):
     """
     Strips common Objective-C cluster prefixes for readability.
     E.g. '__NSCFBoolean' -> 'Bool', '__NSCFString' -> 'String'.
+
     :param class_name: Full ObjC class name string
     :return: Shortened display name
     """
@@ -217,11 +234,8 @@ def shorten_class_name(class_name):
 
 def is_tagged_pointer(obj):
     """
-    Returns True if obj is an Objective-C tagged pointer.
-    On arm64, tagged pointers have the most significant bit (bit 63) set.
-    They store the value inline in the pointer — no heap object exists,
-    so ObjC message sends via LLDB expression evaluation fail with
-    'no known method' errors.
+    Returns True if the object address is an Objective-C tagged pointer.
+
     :param obj: Object address string (e.g. '0xbcc1f272952fc4b8')
     :return: bool
     """
@@ -233,7 +247,8 @@ def is_tagged_pointer(obj):
 
 def print_table(entries, label, filter_str):
     """
-    Prints the key-value pairs as a formatted ASCII table.
+    Prints the collected key-value pairs as a formatted ASCII table.
+
     :param entries: List of (key, value) tuples
     :param label: Display name for the NSUserDefaults instance
     :param filter_str: Active filter string (shown in footer when non-empty)
