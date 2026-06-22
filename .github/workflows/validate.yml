@@ -1,0 +1,26 @@
+name: validate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - "lldb/**"
+
+concurrency:
+  group: validate-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Python syntax check
+        run: |
+          find . -name "*.py" -exec python3 -m py_compile {} \;

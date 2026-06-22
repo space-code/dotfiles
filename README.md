@@ -27,6 +27,7 @@ This project enhances the LLDB debugging experience with custom Python commands,
 | :--- | :--- | :--- |
 | **`alcheck`** | Highlights `UIViews` with Auto Layout issues by outlining them in red. | `[-c color] [-w width]` |
 | **`pdefaults`** | Dumps `NSUserDefaults` contents as a formatted key-value table. | `[-s suite] [-f filter] [-o]` |
+| **`hex_dump`** | Reads memory at a specific address and returns a formatted hex dump. | `<address> [-c count] [-o offset]` |
 
 ### Useful Aliases & Regex Commands
 

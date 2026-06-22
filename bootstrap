@@ -23,6 +23,8 @@ update() {
           --exclude "bootstrap.sh" \
           --exclude "README.md" \
           --exclude "LICENSE" \
+          --exclude ".venv" \
+          --exclude ".ruff_cache/" \
           -avh --no-perms . ~
           
     # Reload the bash profile
