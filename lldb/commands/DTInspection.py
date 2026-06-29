@@ -17,7 +17,7 @@ def commands():
     Returns a list of custom LLDB command instances defined in this module.
     The registration logic in lldbinit.py calls this function.
     """
-    return [DTHexDumpCommand()]
+    return [DTHexDumpCommand(), DTPrintFrameCommand()]
 
 
 class DTHexDumpCommand(bc.BaseCommand):
@@ -168,3 +168,107 @@ class DTHexDumpCommand(bc.BaseCommand):
             print(f"0x{current_addr:016x}  {hex_part}  {ascii_part}")
 
         print("")
+
+
+class DTPrintFrameCommand(bc.BaseCommand):
+    """
+    A custom LLDB command that performs a low-level architectural inspection
+    of the current thread's topmost stack frame (Frame #0).
+
+    Usage: print_frame
+
+    This command extracts raw CPU execution context and translates it into high-value
+    metadata for reverse-engineering. It automates symbolication, resolves memory bounds,
+    and dynamically calculates ASLR slides to map live runtime execution directly to
+    static analysis tools (like Hopper Disassembler or IDA Pro).
+    """
+
+    def name(self):
+        """Returns the command name as it will be used in the LLDB console."""
+        return "print_frame"
+
+    def description(self):
+        """Returns a short description of the command's functionality."""
+        return "Display architecture-level details of the current stack frame."
+
+    def options(self):
+        """This command does not require any additional arguments or options."""
+        return []
+
+    def run(self, args, options):
+        """
+        The main execution logic for the print_frame command.
+        """
+
+        target = lldb.debugger.GetSelectedTarget()
+        process = target.GetProcess()
+
+        if not process or not process.IsValid():
+            print("error: valid active process not found")
+            return
+
+        thread = process.GetSelectedThread()
+
+        if not thread or not thread.IsValid():
+            print("error: no active thread discovered")
+            return
+
+        frame = thread.GetSelectedFrame() if thread else None
+
+        if not frame or not frame.IsValid():
+            print("error: unable to resolve valid stack frame #0")
+            return
+
+        pc_address = frame.GetPC()
+        sp_address = frame.GetSP()
+        frame_idx = frame.GetFrameID()
+
+        symbol_context = frame.GetSymbolContext(lldb.eSymbolContextEverything)
+
+        module = symbol_context.GetModule()
+        module_name = (
+            module.GetFileSpec().GetFilename()
+            if module and module.IsValid()
+            else "Unknown Module"
+        )
+
+        function_name = "Unknown Function"
+
+        if symbol_context.GetFunction().IsValid():
+            function_name = symbol_context.GetFunction().GetName()
+        elif symbol_context.GetSymbol().IsValid():
+            function_name = symbol_context.GetSymbol().GetName()
+
+        aslr_offset_str = "N/A"
+
+        if module and module.IsValid():
+            header_load_addr = module.GetObjectFileHeaderAddress().GetLoadAddress(
+                target
+            )
+            header_file_addr = module.GetObjectFileHeaderAddress().GetFileAddress()
+
+            if header_load_addr != lldb.LLDB_INVALID_ADDRESS:
+                aslr_slide = header_load_addr - header_file_addr
+                relative_offset = pc_address - header_load_addr
+                aslr_offset_str = (
+                    f"0x{relative_offset:x} (Module ASLR Slide: 0x{aslr_slide:x})"
+                )
+
+        print("\n" + "=" * 80)
+        print(f"[FRAME #{frame_idx}] -> CURRENT CPU ARCHITECTURE CONTEXT")
+        print("=" * 80)
+        print(f"• Module:      {module_name}")
+        print(f"• Function:    {function_name}")
+        print(f"• Address PC:  0x{pc_address:016x}")
+        print(f"• File Offset: {aslr_offset_str}")
+        print(f"• Stack SP:    0x{sp_address:016x}")
+
+        line_entry = symbol_context.GetLineEntry()
+        if line_entry and line_entry.IsValid():
+            print(
+                f"• Source File: {line_entry.GetFileSpec().GetFilename()}:{line_entry.GetLine()}"
+            )
+
+        print("=" * 80 + "\n")
+
+        return
